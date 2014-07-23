@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 from sklearn.ensemble import RandomForestClassifier
 import csv
+from features import *
 
 dataDirectory = "data/clips"
 
@@ -50,20 +51,6 @@ def loadClips(patient,clipType,clipNumbers,targetFrequency):
             data.append(tmpData)
     return pd.concat(data)
 
-#functions for calculating features for use in seizure detection algorithm
-
-def maximumAmplitude(data):
-    #maximum unsigned reading accross all channels
-    return pd.DataFrame({'maxAmp':[data.ix[:,1:].abs().apply(np.max).max()]})
-                        
-def meanAmplitude(data):
-    #mean of the maximum unsigned reading in each channel
-    return pd.DataFrame({'meanAmp':[data.ix[:,1:].abs().apply(np.max).mean()]})
-
-#Dictionary associates functions with string names so that features can be easily selected later
-funcDict = {'maxAmp'  : maximumAmplitude,
-            'meanAmp' : meanAmplitude}
-
 def convertToFeatureSeries(data,featureFunctions,isSeizure=False,latency=0,isTest=False,testFile=""):
     #converts time series data into a set of features
     #featureFunctions should be a list of the desired features, which must be defined in funcDict
@@ -77,8 +64,8 @@ def convertToFeatureSeries(data,featureFunctions,isSeizure=False,latency=0,isTes
     data = pd.concat(features,axis=1)
     if not isTest:
         data['latency'] = latency
-        data['isSeizure'] = isSeizure
-        data['isEarly'] = latency < 15 and isSeizure
+        data['isSeizure'] = int(isSeizure)
+        data['isEarly'] = int(latency < 15 and isSeizure)
     else:
         data['testFile'] = testFile
     return data
@@ -155,14 +142,14 @@ def loadTestSample(featureFunctions,commonFrequency=-1):
 def trainRandomForest(trainDF):
     #trains a random forest on the training sample and returns the trained forest
     trainArray = trainDF.values
-    forest = RandomForestClassifier(n_estimators=10)
+    forest = RandomForestClassifier(n_estimators=100)
     return forest.fit(trainArray[:,0:-3],trainArray[:,-2:])
 
 def validateRandomForest(forest,validDF,latencyBinWidth=-1):
     #prints efficiency and false positive metrics and plots efficiency vs. latency for a given forest using the validation sample
     output = forest.predict(validDF.values[:,0:-3])
-    validDF['PiS'] = output[:,0]
-    validDF['PiE'] = output[:,1]
+    validDF['PiS'] = output[:,0].astype(int)
+    validDF['PiE'] = output[:,1].astype(int)
     for key,group in validDF.groupby('isSeizure'):
         if key:
             print "Efficiency for seizure detection: ",group['PiS'].mean()
@@ -183,9 +170,45 @@ def validateRandomForest(forest,validDF,latencyBinWidth=-1):
             print "False positive rate for early seizure: ",group['PiE'].mean()
     return validDF
 
-def makeSubmission(forest,testDF):
+def trainDoubleForest(trainDF):
+    #trains a random forest on the training sample and returns the trained forest
+    trainArray = trainDF.values
+    forestSeizure = RandomForestClassifier(n_estimators=100)
+    forestEarly = RandomForestClassifier(n_estimators=100)
+    return {'seizure':forestSeizure.fit(trainArray[:,0:-3],trainArray[:,-2]),'early':forestEarly.fit(trainArray[:,0:-3],trainArray[:,-1])}
+
+def validateDoubleForest(forests,validDF,latencyBinWidth=-1):
+    #prints efficiency and false positive metrics and plots efficiency vs. latency for a given forest using the validation sample
+    seizure = forests['seizure'].predict(validDF.values[:,0:-3])
+    early = forests['early'].predict(validDF.values[:,0:-3])
+    validDF['PiS'] = seizure.astype(int)
+    validDF['PiE'] = early.astype(int)
+    for key,group in validDF.groupby('isSeizure'):
+        if key:
+            print "Efficiency for seizure detection: ",group['PiS'].mean()
+            for k,g in group.groupby('isEarly'):
+                if k:
+                    print "Efficiency for early seizure detection: ",g['PiE'].mean()
+            df = group.groupby('latency').mean()
+            if latencyBinWidth > 1.0:
+                df = downSample(df,latencyBinWidth)
+            plt.plot(np.array(df.index),df['PiS'],'b-')
+            plt.plot(np.array(df.index),df['PiE'],'r-')
+            plt.xlabel('latency')
+            plt.ylabel('efficiency')
+            plt.title('Detection efficiency vs. Latency')
+            plt.savefig('efficiencySeizure.png')
+        else:
+            print "False positive rate for seizure: ",group['PiS'].mean()
+            print "False positive rate for early seizure: ",group['PiE'].mean()
+    return validDF
+
+def makeSubmission(forestList,testDF):
     #runs the forest on the test sample and writes submission file
-    output = forest.predict(testDF.values[:,0:-1])
+    output = []
+    for forest in forestList:
+        output.append(forest.predict(testDF.values[:,0:-1]))
+    output = np.array(output).T
     outFile = open("submission.csv","wb")
     csv_writer = csv.writer(outFile)
     csv_writer.writerow(['clip','seizure','early'])
