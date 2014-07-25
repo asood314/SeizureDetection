@@ -203,15 +203,16 @@ def validateDoubleForest(forests,validDF,latencyBinWidth=-1):
             print "False positive rate for early seizure: ",group['PiE'].mean()
     return validDF
 
+
 def makeSubmission(forestList,testDF):
     #runs the forest on the test sample and writes submission file
     output = []
     for forest in forestList:
-        output.append(forest.predict(testDF.values[:,0:-1]))
+        output.append(forest.predict_proba(testDF.values[:,0:-1])[:,1])
     output = np.array(output).T
     outFile = open("submission.csv","wb")
     csv_writer = csv.writer(outFile)
     csv_writer.writerow(['clip','seizure','early'])
-    csv_writer.writerows(zip(testDF['testFile'].values,output[:,0].astype(int),output[:,1].astype(int)))
+    csv_writer.writerows(zip(testDF['testFile'].values,output[:,0].astype(float),output[:,1].astype(float)))
     outFile.close()
     return
