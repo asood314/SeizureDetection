@@ -138,6 +138,25 @@ def loadTestSample(featureFunctions,commonFrequency=-1):
                 entries.append(featureSet)
     testSample = pd.concat(entries)
     return testSample
+    
+def loadIndivTestSamples(dataSelector, featureFunctions,commonFrequency=-1):
+    #loads test data
+    #arguments same as corresponding arguments for loadTrainAndValidationSamples
+    #patientList = ['Dog_1','Dog_2','Dog_3','Dog_4','Patient_1','Patient_2','Patient_3','Patient_4','Patient_5','Patient_6','Patient_7','Patient_8']
+    entries = []
+    for patient in dataSelector:
+        files = os.listdir('%s/%s'%(dataDirectory,patient[0]))
+        for phil in files:
+            if phil.count('test') > 0:
+                tmpData = loadData("%s/%s/%s"%(dataDirectory,patient[0],phil))
+                if commonFrequency > 0:
+                    downFactor = float(len(tmpData['time'])) / commonFrequency
+                    if downFactor > 1.0:
+                        tmpData = downSample(tmpData,downFactor)
+                featureSet = convertToFeatureSeries(tmpData,featureFunctions,isTest=True,testFile=phil)
+                entries.append(featureSet)
+    testSample = pd.concat(entries)
+    return testSample
 
 def trainRandomForest(trainDF):
     #trains a random forest on the training sample and returns the trained forest
@@ -203,6 +222,22 @@ def validateDoubleForest(forests,validDF,latencyBinWidth=-1):
             print "False positive rate for early seizure: ",group['PiE'].mean()
     return validDF
 
+def testProbs(forestList,testDF):
+    #runs the forest on the test sample and returns output
+    output = []
+    for forest in forestList:
+        output.append(forest.predict_proba(testDF.values[:,0:-1])[:,1])
+    output = np.array(output).T
+    return output
+    
+def makeSubmit(output, testDF):
+    # writes submission file
+    outFile = open("submission.csv","wb")
+    csv_writer = csv.writer(outFile)
+    csv_writer.writerow(['clip','seizure','early'])
+    csv_writer.writerows(zip(testDF['testFile'].values,output[:,0].astype(float),output[:,1].astype(float)))
+    outFile.close()
+    return
 
 def makeSubmission(forestList,testDF):
     #runs the forest on the test sample and writes submission file
