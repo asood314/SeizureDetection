@@ -7,23 +7,31 @@ def allFeatures(data):
     chans = len(data.ix[1,:])
     freq = np.fft.fftfreq(len(data['time']),1.0/len(data['time']))
     maxFreqs = []
+    times = len(data.ix[:,1])-1 
+    delta = data.values[1:,:] - data.values[:times,:]
+    glob = pd.DataFrame(delta)
+    freqGlob = np.fft.fftfreq(len(glob.ix[:,0]),1.0/len(glob.ix[:,0]))
+    maxFreqsGlob = []
 # Channel Features
     for i in range(1,chans):
         output.append(data.ix[:,i].abs().max())
-    for i in range(1,chans):
         output.append(data.ix[:,i].abs().mean())
-    for i in range(1,chans):
         output.append(data.ix[:,i].abs().var())    
-    for i in range(1,chans):
         output.append(data.ix[:,i].var())
-    for i in range(1,chans):
         output.append(abs(np.fft.fft(data.ix[:,i])).max())
-    for i in range(1,chans):
         output.append(abs(np.fft.fft(data.ix[:,i])).mean())
-    for i in range(1,chans):
         output.append(abs(np.fft.fft(data.ix[:,i])).var())
-    for i in range(1,chans):
         ft = abs(np.fft.fft(data.ix[:,i]))
+        output.append(abs(freq[np.argmax(ft)]))
+# Derivative Channel Features
+        output.append(np.max(np.abs(delta[:,i])))
+        output.append(np.mean(np.abs(delta[:,i])))
+        output.append(np.var(np.abs(delta[:,i])))
+        output.append(np.var(delta[:,i]))
+        output.append(np.max(np.abs(np.fft.fft(delta[:,i]))))
+        output.append(np.mean(np.abs(np.fft.fft(delta[:,i]))))
+        output.append(np.var(np.abs(np.fft.fft(delta[:,i]))))
+        ft = np.abs(np.fft.fft(delta[:,i]))
         output.append(abs(freq[np.argmax(ft)]))
 # Global Features
     output.append(data.ix[:,1:].abs().apply(np.max).max())
@@ -42,6 +50,23 @@ def allFeatures(data):
     output.append(np.max(maxFreqs))
     output.append(np.mean(maxFreqs))
     output.append(np.var(maxFreqs))
+# Derivative Global Features
+    output.append(glob.ix[:,1:].abs().apply(np.max).max())
+    output.append(glob.ix[:,1:].abs().apply(np.max).mean())
+    output.append(glob.ix[:,1:].abs().apply(np.max).var())
+    output.append(glob.ix[:,1:].apply(np.max).var())
+    output.append(glob.ix[:,1:].abs().apply(np.mean).var())
+    output.append(glob.ix[:,1:].abs().apply(np.var).var())
+    output.append(glob.ix[:,1:].abs().apply(np.var).mean())
+    output.append(np.array([abs(np.fft.fft(glob.ix[:,i])).max() for i in range(len(glob.columns) - 1)]).max())
+    output.append(np.array([abs(np.fft.fft(glob.ix[:,i])).max() for i in range(len(glob.columns) - 1)]).mean())
+    output.append(np.array([abs(np.fft.fft(glob.ix[:,i])).max() for i in range(len(glob.columns) - 1)]).var())
+    for i in range(len(glob.columns)-1):
+        ft = abs(np.fft.fft(glob.ix[:,i]))
+        maxFreqsGlob.append(abs(freqGlob[np.argmax(ft)]))
+    output.append(np.max(maxFreqsGlob))
+    output.append(np.mean(maxFreqsGlob))
+    output.append(np.var(maxFreqsGlob))
     return pd.DataFrame({'allFeats':output}).T
 
 def maximumAmplitude(data):
