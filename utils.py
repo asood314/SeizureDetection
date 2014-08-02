@@ -114,10 +114,10 @@ def loadTrainAndValidationSamples(dataSelector,featureFunctions,commonFrequency=
     if len(entriesTrain) == 0:
         print "ERROR: No entries in training sample"
         return {'train':0,'validation':0}
-    trainSample = pd.concat(entriesTrain)
+    trainSample = pd.concat(entriesTrain,ignore_index=True)
     if len(entriesValid) == 0:
         return {'train':trainSample,'validation':0}
-    validSample = pd.concat(entriesValid)
+    validSample = pd.concat(entriesValid,ignore_index=True)
     return {'train':trainSample,'validation':validSample}
 
 def loadTestSample(featureFunctions,commonFrequency=-1):
@@ -136,7 +136,7 @@ def loadTestSample(featureFunctions,commonFrequency=-1):
                         tmpData = downSample(tmpData,downFactor)
                 featureSet = convertToFeatureSeries(tmpData,featureFunctions,isTest=True,testFile=phil)
                 entries.append(featureSet)
-    testSample = pd.concat(entries)
+    testSample = pd.concat(entries,ignore_index=True)
     return testSample
     
 def loadIndivTestSamples(dataSelector, featureFunctions,commonFrequency=-1):
@@ -155,7 +155,7 @@ def loadIndivTestSamples(dataSelector, featureFunctions,commonFrequency=-1):
                         tmpData = downSample(tmpData,downFactor)
                 featureSet = convertToFeatureSeries(tmpData,featureFunctions,isTest=True,testFile=phil)
                 entries.append(featureSet)
-    testSample = pd.concat(entries)
+    testSample = pd.concat(entries,ignore_index=True)
     return testSample
 
 def trainRandomForest(trainDF):
@@ -251,3 +251,28 @@ def makeSubmission(forestList,testDF):
     csv_writer.writerows(zip(testDF['testFile'].values,output[:,0].astype(float),output[:,1].astype(float)))
     outFile.close()
     return
+
+def plotFeatures(feat1,feat2,data):
+    m1 = np.mean(data[feat1])
+    s1 = np.std(data[feat1])
+    m2 = np.mean(data[feat2])
+    s2 = np.std(data[feat2])
+    plt.subplot(1,2,1)
+    for key,group in data.groupby('isSeizure'):
+        if key:
+            plt.plot((group[feat1]-m1)/s1,(group[feat2]-m2)/s2,'ro')
+        else:
+            plt.plot((group[feat1]-m1)/s1,(group[feat2]-m2)/s2,'bo')
+    plt.xlabel(feat1)
+    plt.ylabel(feat2)
+    plt.legend(( 'seizure' , 'non-seizure' ))
+    plt.subplot(1,2,2)
+    for key,group in data.groupby('isEarly'):
+        if key:
+            plt.plot((group[feat1]-m1)/s1,(group[feat2]-m2)/s2,'ro')
+        else:
+            plt.plot((group[feat1]-m1)/s1,(group[feat2]-m2)/s2,'bo')
+    plt.xlabel(feat1)
+    plt.ylabel(feat2)
+    plt.legend(( 'early' , 'non-early' ))
+    plt.savefig('%s_v_%s.png'%(feat2,feat1))

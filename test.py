@@ -14,12 +14,12 @@ dataSelector = [['Dog_1',0,0],
                 ['Patient_7',0,0],
                 ['Patient_8',0,0]]
 print "Loading train/validation samples using selector:\n",dataSelector
-samples = loadTrainAndValidationSamples(dataSelector,funcDict.keys(),100.0)
+samples = loadTrainAndValidationSamples(dataSelector,['allFeats'],100.0)
 print "Training sample size: ",samples['train'].shape
 forest = trainDoubleForest(samples['train'])
 print "Done training. Loading test samples..."
 
-testSam = loadTestSample(funcDict.keys(),100.0)
+testSam = loadTestSample(['allFeats'],100.0)
 print "Test sample size: ",testSam.shape
 makeSubmission([forest['seizure'],forest['early']],testSam)
 print "Done."
