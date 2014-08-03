@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import os
 from sklearn.ensemble import RandomForestClassifier
 import csv
-from featuresall import *
+from features import *
 
 dataDirectory = "data/clips"
 
