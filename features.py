@@ -12,62 +12,105 @@ def allFeatures(data):
     glob = pd.DataFrame(delta)
     freqGlob = np.fft.fftfreq(len(glob.ix[:,0]),1.0/len(glob.ix[:,0]))
     maxFreqsGlob = []
+    featureList = []
 # Channel Features
     for i in range(1,chans):
         output.append(data.ix[:,i].abs().max())
+        featureList.append('chan%iMaxAmp'%(i-1))
         output.append(data.ix[:,i].abs().mean())
-        output.append(data.ix[:,i].abs().var())    
+        featureList.append('chan%iMeanAmp'%(i-1))
+        output.append(data.ix[:,i].abs().var()) 
+        featureList.append('chan%iVarAbs'%(i-1))   
         output.append(data.ix[:,i].var())
+        featureList.append('chan%iVar'%(i-1))
         output.append(abs(np.fft.fft(data.ix[:,i])).max())
+        featureList.append('chan%iMaxFourAmp'%(i-1))
         output.append(abs(np.fft.fft(data.ix[:,i])).mean())
+        featureList.append('chan%iMeanFourAmp'%(i-1))
         output.append(abs(np.fft.fft(data.ix[:,i])).var())
+        featureList.append('chan%iVarFourAmp'%(i-1))
         ft = abs(np.fft.fft(data.ix[:,i]))
         output.append(abs(freq[np.argmax(ft)]))
+        featureList.append('chan%iMaxFreq'%(i-1))
 # Derivative Channel Features
         output.append(np.max(np.abs(delta[:,i])))
+        featureList.append('chan%iMaxDel'%(i-1))
         output.append(np.mean(np.abs(delta[:,i])))
+        featureList.append('chan%iMeanDel'%(i-1))
         output.append(np.var(np.abs(delta[:,i])))
+        featureList.append('chan%iVarAbsDel'%(i-1))
         output.append(np.var(delta[:,i]))
+        featureList.append('chan%iVarDel'%(i-1))
         output.append(np.max(np.abs(np.fft.fft(delta[:,i]))))
+        featureList.append('chan%iMaxDelFour'%(i-1))
         output.append(np.mean(np.abs(np.fft.fft(delta[:,i]))))
+        featureList.append('chan%iMeanDelFour'%(i-1))
         output.append(np.var(np.abs(np.fft.fft(delta[:,i]))))
+        featureList.append('chan%iVarDelFour'%(i-1))
         ft = np.abs(np.fft.fft(delta[:,i]))
         output.append(abs(freq[np.argmax(ft)]))
+        featureList.append('chan%iMaxDelFreq'%(i-1))
 # Global Features
     output.append(data.ix[:,1:].abs().apply(np.max).max())
+    featureList.append('maxAmp')
     output.append(data.ix[:,1:].abs().apply(np.max).mean())
+    featureList.append('meanAmp')
     output.append(data.ix[:,1:].abs().apply(np.max).var())
+    featureList.append('varAmpAbs')
     output.append(data.ix[:,1:].apply(np.max).var())
+    featureList.append('varAmp')
     output.append(data.ix[:,1:].abs().apply(np.mean).var())
+    featureList.append('varMean')
     output.append(data.ix[:,1:].abs().apply(np.var).var())
+    featureList.append('varVar')
     output.append(data.ix[:,1:].abs().apply(np.var).mean())
+    featureList.append('meanVar')
     output.append(np.array([abs(np.fft.fft(data['chan%i'%i])).max() for i in range(len(data.columns) - 1)]).max())
+    featureList.append('maxFourAmp')
     output.append(np.array([abs(np.fft.fft(data['chan%i'%i])).max() for i in range(len(data.columns) - 1)]).mean())
+    featureList.append('meanFourAmp')
     output.append(np.array([abs(np.fft.fft(data['chan%i'%i])).max() for i in range(len(data.columns) - 1)]).var())
+    featureList.append('varFourAmp')
     for i in range(len(data.columns)-1):
         ft = abs(np.fft.fft(data['chan%i'%i]))
         maxFreqs.append(abs(freq[np.argmax(ft)]))
     output.append(np.max(maxFreqs))
+    featureList.append('maxFreq')
     output.append(np.mean(maxFreqs))
+    featureList.append('meanFreq')
     output.append(np.var(maxFreqs))
+    featureList.append('varFreq')
 # Derivative Global Features
     output.append(glob.ix[:,1:].abs().apply(np.max).max())
+    featureList.append('maxDel')
     output.append(glob.ix[:,1:].abs().apply(np.max).mean())
+    featureList.append('meanDel')
     output.append(glob.ix[:,1:].abs().apply(np.max).var())
+    featureList.append('varDelAbs')
     output.append(glob.ix[:,1:].apply(np.max).var())
+    featureList.append('varDel')
     output.append(glob.ix[:,1:].abs().apply(np.mean).var())
+    featureList.append('varMeanDel')
     output.append(glob.ix[:,1:].abs().apply(np.var).var())
+    featureList.append('varVarDel')
     output.append(glob.ix[:,1:].abs().apply(np.var).mean())
+    featureList.append('meanVarDel')
     output.append(np.array([abs(np.fft.fft(glob.ix[:,i])).max() for i in range(len(glob.columns) - 1)]).max())
+    featureList.append('maxFourDel')
     output.append(np.array([abs(np.fft.fft(glob.ix[:,i])).max() for i in range(len(glob.columns) - 1)]).mean())
+    featureList.append('meanFourDel')
     output.append(np.array([abs(np.fft.fft(glob.ix[:,i])).max() for i in range(len(glob.columns) - 1)]).var())
+    featureList.append('varFourDel')
     for i in range(len(glob.columns)-1):
         ft = abs(np.fft.fft(glob.ix[:,i]))
         maxFreqsGlob.append(abs(freqGlob[np.argmax(ft)]))
     output.append(np.max(maxFreqsGlob))
+    featureList.append('maxFreqDel')
     output.append(np.mean(maxFreqsGlob))
+    featureList.append('meanFreqDel')
     output.append(np.var(maxFreqsGlob))
-    return pd.DataFrame({'allFeats':output}).T
+    featureList.append('varFreqDel')
+    return pd.DataFrame({'allFeats':output},index=featureList).T
 
 def maximumAmplitude(data):
     #maximum unsigned reading accross all channels
@@ -135,16 +178,16 @@ def varianceOfMaxFrequency(data):
     return pd.DataFrame({'varFreq':[np.var(maxFreqs)]})
 
 #Dictionary associates functions with string names so that features can be easily selected later
-funcDict = {'allFeats'      : allFeatures}#,
-            #'maxAmp'       : maximumAmplitude,
-            #'meanAmp'      : meanAmplitude,
-            #'varAmp'       : varianceOfAmplitude,
-            #'varMean'      : varianceOfMean,
-            #'varVar'       : varianceOfVariance,
-            #'meanVar'      : meanOfVariance,
-            #'maxFourAmp'   : maxFourierAmplitude,
-            #'meanFourAmp'  : meanFourierAmplitude,
-            #'varFourAmp'   : varianceOfFourierAmplitude,
-            #'maxFreq'      : maxFrequency,
-            #'meanFreq'     : meanOfMaxFrequency,
-            #'varFreq'      : varianceOfMaxFrequency}
+funcDict = {'allFeats'      : allFeatures,
+            'maxAmp'       : maximumAmplitude,
+            'meanAmp'      : meanAmplitude,
+            'varAmp'       : varianceOfAmplitude,
+            'varMean'      : varianceOfMean,
+            'varVar'       : varianceOfVariance,
+            'meanVar'      : meanOfVariance,
+            'maxFourAmp'   : maxFourierAmplitude,
+            'meanFourAmp'  : meanFourierAmplitude,
+            'varFourAmp'   : varianceOfFourierAmplitude,
+            'maxFreq'      : maxFrequency,
+            'meanFreq'     : meanOfMaxFrequency,
+            'varFreq'      : varianceOfMaxFrequency}
