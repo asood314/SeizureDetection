@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import os
 from sklearn.ensemble import RandomForestClassifier
 import csv
-from features import *
+from featuresall import *
 
 dataDirectory = "data/clips"
 
@@ -65,7 +65,7 @@ def convertToFeatureSeries(data,featureFunctions,isSeizure=False,latency=0,isTes
     if not isTest:
         data['latency'] = latency
         data['isSeizure'] = int(isSeizure)
-        data['isEarly'] = int(latency < 15 and isSeizure)
+        data['isEarly'] = int(latency < 18 and isSeizure)
     else:
         data['testFile'] = testFile
     return data
@@ -161,7 +161,7 @@ def loadIndivTestSamples(dataSelector, featureFunctions,commonFrequency=-1):
 def trainRandomForest(trainDF):
     #trains a random forest on the training sample and returns the trained forest
     trainArray = trainDF.values
-    forest = RandomForestClassifier(n_estimators=100)
+    forest = RandomForestClassifier(n_estimators=1000)
     return forest.fit(trainArray[:,0:-3],trainArray[:,-2:])
 
 def validateRandomForest(forest,validDF,latencyBinWidth=-1):
@@ -192,8 +192,8 @@ def validateRandomForest(forest,validDF,latencyBinWidth=-1):
 def trainDoubleForest(trainDF):
     #trains a random forest on the training sample and returns the trained forest
     trainArray = trainDF.values
-    forestSeizure = RandomForestClassifier(n_estimators=100)
-    forestEarly = RandomForestClassifier(n_estimators=100)
+    forestSeizure = RandomForestClassifier(n_estimators=1000)
+    forestEarly = RandomForestClassifier(n_estimators=1000)
     return {'seizure':forestSeizure.fit(trainArray[:,0:-3],trainArray[:,-2]),'early':forestEarly.fit(trainArray[:,0:-3],trainArray[:,-1])}
 
 def validateDoubleForest(forests,validDF,latencyBinWidth=-1):
