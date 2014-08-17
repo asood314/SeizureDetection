@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import itertools
 #functions for calculating features for use in seizure detection algorithm
 
 def allFeatures(data):
@@ -17,6 +18,8 @@ def allFeatures(data):
     glob2 = pd.DataFrame(delta2)
     freqGlob2 = np.fft.fftfreq(len(glob2.ix[:,0]),1.0/len(glob2.ix[:,0]))
     maxFreqsGlob2 = []
+    combs = []
+    [combs.append(a) for a in (itertools.combinations(list(data.columns)[1:], 2))]
 # Channel Features
     for i in range(1,chans):
         output.append(data.ix[:,i].abs().max())
@@ -227,7 +230,15 @@ def varianceOfMaxFrequency(data):
     for i in range(len(data.columns)-1):
         ft = abs(np.fft.fft(data['chan%i'%i]))
         maxFreqs.append(abs(freq[np.argmax(ft)]))
-    return pd.DataFrame({'varFreq':[np.var(maxFreqs)]})
+    return pd.DataFrame({'varFreq':[np.var(maxFreqs)]}) 
+    
+def covariances(data):
+    # inter-channel covariance
+    combs = []
+    # combinations of all channels 
+    [combs.append(a) for a in (itertools.combinations(list(data.columns)[1:], 2))] 
+    covs = [np.cov(data.ix[:,combs[k][0]], data.ix[:,combs[k][1]])[0,1] for k in np.arange(0,len(combs)) ]
+    return pd.DataFrame({'coVar':[np.mean(np.abs(covs))]})
 
 #Dictionary associates functions with string names so that features can be easily selected later
 funcDict = {'allFeats'      : allFeatures,
@@ -242,4 +253,6 @@ funcDict = {'allFeats'      : allFeatures,
             'varFourAmp'   : varianceOfFourierAmplitude,
             'maxFreq'      : maxFrequency,
             'meanFreq'     : meanOfMaxFrequency,
-            'varFreq'      : varianceOfMaxFrequency}
+            'varFreq'      : varianceOfMaxFrequency,
+            'coVar'        : covariances
+            }
