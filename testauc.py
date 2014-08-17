@@ -8,14 +8,14 @@ def validationProbs(forestList,testDF):
     output = np.array(output).T
     return output
 
-dataSelector = [['Dog_3',0.5,0.5]]
+dataSelector = [['Patient_8',0.5,0.5]]
                 
 predictions = []; validations = []; testSamples = pd.DataFrame()
                 
 for num, dataSet in enumerate(dataSelector):
     #print dataSet, num + 1
     print "Loading train/validation samples using selector:\n",dataSelector[num] 
-    print "(lat, freq, trees) = ", (19, 100,1000)
+    print "(lat, freq, trees) = ", (18, 100,1000)
     samples = loadTrainAndValidationSamples([dataSet],['allFeats'],100.0)
     print "Training sample size: ",samples['train'].shape
     print "Validation sample size: ",samples['validation'].shape
