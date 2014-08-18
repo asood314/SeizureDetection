@@ -21,13 +21,16 @@ for num, dataSet in enumerate(dataSelector):
     print "Loading train/validation samples using selector:\n",dataSelector[num]
     samples = loadTrainAndValidationSamples([dataSet],['allFeats'],100.0)
     print "Training sample size: ",samples['train'].shape
-    forest = trainDoubleForest(samples['train'])
+    forest = trainExtraTrees(samples['train'])
+    #hasher, forest = trainNaiveBayes(samples['train']) ##
     print "Done training. Loading test samples..."
 
     testSam = loadIndivTestSamples([dataSet], ['allFeats'],100.0) 
+    #testTransformed = hasher.transform(testSam.values[:, 0:-1]) ##
     testSamples = pd.concat([testSamples, testSam])    
     print "Test sample size: ",testSam.shape
     predictions.extend(testProbs([forest['seizure'],forest['early']],testSam )) 
+    #predictions.extend(testProbsHash([forest['seizure'],forest['early']],testTransformed )) ##
    
 makeSubmit(np.array(predictions), testSamples)
 
