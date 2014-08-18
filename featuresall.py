@@ -18,11 +18,10 @@ def allFeatures(data):
     glob2 = pd.DataFrame(delta2)
     freq2 = np.fft.fftfreq(len(glob2.ix[:,0]),1.0/len(glob2.ix[:,0]))
     maxFreqs2 = []
+    autocrs = []; allChanAc = []
+    
 # Channel Features
-    #combs = []
-    #[combs.append(a) for a in (itertools.combinations(list(data.columns)[1:], 2))] 
-   # for k in np.arange(0,len(combs)):
-       # output.append(np.abs(np.cov(data.ix[:,combs[k][0]], data.ix[:,combs[k][1]])[0,1]))
+
     for i in range(1,chans):
         output.append(data.ix[:,i].abs().max())
         featureList.append('chan%iMaxAmp'%(i-1))
@@ -41,6 +40,10 @@ def allFeatures(data):
         ft = abs(np.fft.fft(data.ix[:,i]))
         output.append(abs(freq[np.argmax(ft)]))
         featureList.append('chan%iMaxFreq'%(i-1))
+        aut = np.correlate(data.ix[:,i], data.ix[:,i], mode = 'full')
+        autC = aut[aut.size/2]
+        output.append(np.sum(np.abs(autC)))
+        featureList.append('chan%iAutCor'%(i-1))
 # 1st Derivative Channel Features
         output.append(np.max(np.abs(delta1[:,i])))
         featureList.append('chan%iMaxDel1'%(i-1))
@@ -59,6 +62,10 @@ def allFeatures(data):
         ft = np.abs(np.fft.fft(delta1[:,i]))
         output.append(abs(freq1[np.argmax(ft)]))
         featureList.append('chan%iMaxDel1Freq'%(i-1))
+        aut = np.correlate(delta1[:,i], delta1[:,i], mode = 'full')
+        autC = aut[aut.size/2]
+        output.append(np.sum(np.abs(autC)))
+        featureList.append('chan%iDel1AutCor'%(i-1))
 # 2nd Derivative Channel Features
         output.append(np.max(np.abs(delta2[:,i])))
         featureList.append('chan%iMaxDel2'%(i-1))
@@ -77,6 +84,10 @@ def allFeatures(data):
         ft = np.abs(np.fft.fft(delta2[:,i]))
         output.append(abs(freq2[np.argmax(ft)]))
         featureList.append('chan%iMaxDel2Freq'%(i-1))
+        aut = np.correlate(delta2[:,i], delta2[:,i], mode = 'full')
+        autC = aut[aut.size/2]
+        output.append(np.sum(np.abs(autC)))
+        featureList.append('chan%iDel2AutCor'%(i-1))
 # Global Features
     output.append(data.ix[:,1:].abs().apply(np.max).max())
     featureList.append('maxAmp')
@@ -112,6 +123,11 @@ def allFeatures(data):
     covs = [np.cov(data.ix[:,combs[k][0]], data.ix[:,combs[k][1]])[0,1] for k in np.arange(0,len(combs)) ]
     output.append(np.mean(np.abs(covs)))
     featureList.append('coVar')
+    for i in range(len(data.columns)-1):
+        autocrs = np.correlate(data['chan%i'%i], data['chan%i'%i], mode = 'full' )
+        allChanAc.append(np.sum(np.abs(autocrs[autocrs.size/2:])))
+    output.append(np.mean(allChanAc))
+    featureList.append('autCor')
 # 1st Derivative Global Features
     output.append(glob1.ix[:,1:].abs().apply(np.max).max())
     featureList.append('maxDel1')

@@ -3,11 +3,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import (RandomForestClassifier, GradientBoostingClassifier, 
+                              ExtraTreesClassifier, AdaBoostClassifier, RandomTreesEmbedding)
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import BernoulliNB
 import csv
-from featuresall import *
+from features_indChan import *
 
 dataDirectory = "data/clips"
 
@@ -67,7 +68,7 @@ def convertToFeatureSeries(data,featureFunctions,isSeizure=False,latency=0,isTes
     if not isTest:
         data['latency'] = latency
         data['isSeizure'] = int(isSeizure)
-        data['isEarly'] = int(latency < 18 and isSeizure)
+        data['isEarly'] = int(latency < 16 and isSeizure)
     else:
         data['testFile'] = testFile
     return data
@@ -194,10 +195,49 @@ def validateRandomForest(forest,validDF,latencyBinWidth=-1):
 def trainDoubleForest(trainDF):
     #trains a random forest on the training sample and returns the trained forest
     trainArray = trainDF.values
-    forestSeizure = ExtraTreesClassifier(n_estimators=1000, min_samples_split = 1, n_jobs = 2)
-    forestEarly = ExtraTreesClassifier(n_estimators=1000, min_samples_split = 1, n_jobs = 2)
+    forestSeizure = RandomForestClassifier(n_estimators=1000)
+    forestEarly = RandomForestClassifier(n_estimators=1000)
     return {'seizure':forestSeizure.fit(trainArray[:,0:-3],trainArray[:,-2]),'early':forestEarly.fit(trainArray[:,0:-3],trainArray[:,-1])}
+    
+def trainExtraTrees(trainDF):
+    #trains a random forest on the training sample and returns the trained forest
+    trainArray = trainDF.values
+    extraSeizure = ExtraTreesClassifier(n_estimators = 10000, min_samples_split = 1)
+    extraEarly = ExtraTreesClassifier(n_estimators = 10000, min_samples_split = 1)
+    return {'seizure':extraSeizure.fit(trainArray[:,0:-3],trainArray[:,-2]),'early':extraEarly.fit(trainArray[:,0:-3],trainArray[:,-1])}
 
+def trainDoubleBoost(trainDF):
+    #trains a gradient boosted classifier on the training sample and returns the classifier
+    trainArray = trainDF.values
+    boostSeizure = GradientBoostingClassifier(n_estimators = 1000, subsample = 1.0)
+    boostEarly = GradientBoostingClassifier(n_estimators = 1000, subsample = 0.75)
+    return {'seizure':boostSeizure.fit(trainArray[:,0:-3],trainArray[:,-2]),'early':boostEarly.fit(trainArray[:,0:-3],trainArray[:,-1])}
+
+def trainAdaBoost(trainDF):
+    #trains an adaboost classifier on the training sample and returns the classifier
+    trainArray = trainDF.values
+    adaSeizure = AdaBoostClassifier(DecisionTreeClassifier(), n_estimators = 100)
+    adaEarly = AdaBoostClassifier(DecisionTreeClassifier(), n_estimators = 100)
+    return {'seizure':adaSeizure.fit(trainArray[:,0:-3],trainArray[:,-2]),'early':adaEarly.fit(trainArray[:,0:-3],trainArray[:,-1])}
+
+def trainMixedClassifier(trainDF):
+    #mixed classifiers for seizure and early
+    hasher = RandomTreesEmbedding(n_estimators = 1000, min_samples_split = 1)
+    trainArray = trainDF.values
+    trainTransformed = hasher.fit_transform(trainArray[:, 0:-3]) 
+    mixedSeizure = ExtraTreesClassifier(n_estimators = 10000, min_samples_split = 1)
+    mixedEarly = BernoulliNB(alpha = 1.e-2)
+    return hasher, {'seizure':mixedSeizure.fit(trainArray[:,0:-3],trainArray[:,-2]),'early':mixedEarly.fit(trainTransformed,trainArray[:,-1])}    
+
+def trainNaiveBayes(trainDF):
+    # naive bayes classifier
+    hasher = RandomTreesEmbedding(n_estimators = 1000, min_samples_split = 1)
+    nbSeizure = BernoulliNB(1.e-5)
+    nbEarly = BernoulliNB(1.e-2)
+    trainArray = trainDF.values
+    trainTransformed = hasher.fit_transform(trainArray[:, 0:-3]) 
+    return hasher, {'seizure':nbSeizure.fit(trainTransformed, trainArray[:,-2]),'early':nbEarly.fit(trainTransformed, trainArray[:,-1])}       
+    
 def validateDoubleForest(forests,validDF,latencyBinWidth=-1):
     #prints efficiency and false positive metrics and plots efficiency vs. latency for a given forest using the validation sample
     seizure = forests['seizure'].predict(validDF.values[:,0:-3])
@@ -223,14 +263,24 @@ def validateDoubleForest(forests,validDF,latencyBinWidth=-1):
             print "False positive rate for seizure: ",group['PiS'].mean()
             print "False positive rate for early seizure: ",group['PiE'].mean()
     return validDF
-
+    
 def testProbs(forestList,testDF):
-    #runs the forest on the test sample and returns output
+    #runs the forest on the test sample and returns output 
     output = []
     for forest in forestList:
         output.append(forest.predict_proba(testDF.values[:,0:-1])[:,1])
+        #output.append(forest.predict_proba(testDF.fillna(0).values[:,0:-1])[:,1])
     output = np.array(output).T
-    return output 
+    return output
+    
+def testProbsHash(forestList,testTransArray):
+    #runs the forest on the test sample and returns output
+    output = []
+    for forest in forestList:
+        output.append(forest.predict_proba(testTransArray)[:,1])
+        #output.append(forest.predict_proba(testDF.fillna(0).values[:,0:-1])[:,1])
+    output = np.array(output).T
+    return output
     
 def makeSubmit(output, testDF):
     # writes submission file
@@ -238,6 +288,24 @@ def makeSubmit(output, testDF):
     csv_writer = csv.writer(outFile)
     csv_writer.writerow(['clip','seizure','early'])
     csv_writer.writerows(zip(testDF['testFile'].values,output[:,0].astype(float),output[:,1].astype(float)))
+    outFile.close()
+    return
+    
+def makeSubmitSeizure(output, testDF):
+    # writes submission file
+    outFile = open("submissionS.csv","wb")
+    csv_writer = csv.writer(outFile)
+    csv_writer.writerow(['clip','seizure'])
+    csv_writer.writerows(zip(testDF['testFile'].values,output[:,0].astype(float)))
+    outFile.close()
+    return
+    
+def makeSubmitEarly(output, testDF):
+    # writes submission file
+    outFile = open("submissionE.csv","wb")
+    csv_writer = csv.writer(outFile)
+    csv_writer.writerow(['clip','early'])
+    csv_writer.writerows(zip(testDF['testFile'].values,output[:,0].astype(float)))
     outFile.close()
     return
 
