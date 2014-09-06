@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 import csv
-from winningfeatures import *
+from features import *
 
 dataDirectory = "data/clips"
 

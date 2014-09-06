@@ -1,4 +1,4 @@
-from winningutils import *
+from utils import *
 
 #select all dogs/patients, don't set aside any data for validation
 dataSelector = [['Dog_1',0,0],
