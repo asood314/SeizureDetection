@@ -194,8 +194,8 @@ def validateRandomForest(forest,validDF,latencyBinWidth=-1):
 def trainDoubleForest(trainDF):
     #trains a random forest on the training sample and returns the trained forest
     trainArray = trainDF.values
-    forestSeizure = ExtraTreesClassifier(n_estimators=1000, min_samples_split = 1, n_jobs = 2)
-    forestEarly = ExtraTreesClassifier(n_estimators=1000, min_samples_split = 1, n_jobs = 2)
+    forestSeizure = ExtraTreesClassifier(n_estimators=1000, min_samples_split = 1)
+    forestEarly = ExtraTreesClassifier(n_estimators=1000, min_samples_split = 1)
     return {'seizure':forestSeizure.fit(trainArray[:,0:-3],trainArray[:,-2]),'early':forestEarly.fit(trainArray[:,0:-3],trainArray[:,-1])}
 
 def validateDoubleForest(forests,validDF,latencyBinWidth=-1):
