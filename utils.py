@@ -9,7 +9,6 @@ from sklearn.ensemble import GradientBoostingClassifier
 import csv
 from features import *
 
-
 dataDirectory = "data/clips"
 
 def setDataDirectory(dirName):
